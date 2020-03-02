@@ -45,7 +45,6 @@ apples
 str(apples)
 apples$spacing2 <- as.factor(apples$spacing) #Creates a new column with tree spacing as factor instead of integer 
 
-
 library(ggplot2)
 
 
@@ -62,7 +61,37 @@ summary(apples_m)
 
 #Sapcing was a categorical variable, so output gives the yield estimate (mean) for each level of spacing (intercept is reference level)
 
-# Generalised linear models ----
+#An ANOVA is the same as a linear regression, but it measures the effect of a categorical explanatory variable on a continuous
+# response variable. Running an ANOVA and linear regression will get the same p-value:
+
+anova(apples_m)
+
+
+# The assumptions of a linear model should be checked fist:
+
+#1 Residuals are normally distributed:
+
+apples_resid <- resid(apples_m)
+shapiro.test(apples_resid)
+
+#If P>0.05, there is no significant difference from a normal distribution
+
+#2 Data is homoscedastic (variances not equal)
+
+bartlett.test(apples$yield, apples$spacing2) # (The same as code below)
+bartlett.test(yield ~ spacing2, data = apples)
+
+#3 Observations are independent 
+
+# If any of these are violated, may need to transform the data.
+
+# Can examine the model fit further by looking at mroe plots:
+
+plot(apples_m)
+
+#This creates 4 plots: residuals, Q-Q, scale-location, cooks distance. 
+
+##### Sheep
 
 sheep <- agridat::ilri.sheep
 library(dplyr) 
@@ -84,26 +113,67 @@ summary(sheep_m2)
 #Female will be refernce group and male will be shown seperately. Values for male will be shown as difference between reference
 # and their own intercept/slope
 
+#Visualise the relationship:
+
+
+(sheep.p <- ggplot(sheep, aes(x = weanage, y = weanwt)) +
+    geom_point(aes(colour = sex)) +                                # scatter plot, coloured by sex
+    labs(x = "Age at weaning (days)", y = "Wean weight (kg)") +
+    stat_smooth(method = "lm", aes(fill = sex, colour = sex)) +    # adding regression lines for each sex
+    scale_colour_manual(values = c("#FFC125", "#36648B")) +
+    scale_fill_manual(values = c("#FFC125", "#36648B")) +
+    theme.clean() )
+
+# Generalised linear models ----
+
+#Often in ecology, we have to use generalised linear model (not general), as data has different distributions e.g
+# Poisson and binomial.
+
+# Poisson distribution
 
 # Using population trend data for the European Shag from the Living Planet Index
 # Import the shagLPI.csv file from the project's directory
+getwd()
+
+shag <- shagLPI
+
+str(shag)
+shag$year <- as.numeric(shag$year)
+
+#Histogram to assess distribution
+
+(Shag.hist <- ggplot(shag, aes(pop)) + geom_histogram() + theme.clean())
+
+# pop variable is count adundance i.e integers, so poisson distribution is appropriate.
+
+shag.m <- glm(pop ~ year, family = poisson, data = shag)
+summary(shag.m)
+
+ # Shag abundance varies significantly based on the year
+
+(shag.p <- ggplot(shag, aes(x = year, y = pop)) +
+    geom_point(colour = "#483D8B") +
+    geom_smooth(method = glm, colour = "#483D8B", fill = "#483D8B", alpha = 0.6) +
+    scale_x_continuous(breaks = c(1975, 1980, 1985, 1990, 1995, 2000, 2005)) +
+    theme.clean() +
+    labs(x = " ", y = "European Shag abundance"))
 
 
-
-
-
-
-
-
-
+# ---- Model with binomial distribution
+# Binomial distribution
 
 # Using a dataset on weevil damage to Scott's pine
 # Import the Weevil_damage.csv file from the project's directory
 
+weevil <- Weevil_damage
+str(Weevil)
+weevil$block <- as.factor(weevil$block)
+
+weevil.m <- glm(damage_T_F ~ block, family = binomial, data = weevil)
+summary(weevil.m)
+
+# Probability of pine tree enduring damage does vary significantly based on block tree is located in, but it's not a linear relationship!
+# The bigger the reduction in deviance, the better job the model is doing. 
 
 
 
-
-# Poisson distribution
-
-# Binomial distribution
